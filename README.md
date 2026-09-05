@@ -12,7 +12,9 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-The demo is fully usable without an API key: `/api/ask` uses the small curated local knowledge base in `data/regulations/` and gracefully falls back whenever Gemini is unavailable. The model is configurable through `GEMINI_MODEL`; the default is `gemini-2.5-flash`.
+The demo is fully usable without an API key: `/api/ask` uses the small curated local knowledge base in `data/regulations/` and gracefully falls back whenever Gemini is unavailable. The model is configurable through `GEMINI_MODEL`; the default free-tier Flash model is `gemini-3-flash-preview`.
+
+Document uploads run the deterministic type/size/expiry checks immediately, then optionally call `/api/validate-document` for Gemini field extraction (7-second abort). The browser console records either `Document validation: AI` or `Document validation: deterministic fallback`; an AI failure is intentionally invisible in the UI.
 
 ## Demo path
 
