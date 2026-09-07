@@ -54,10 +54,10 @@ export default function Home() {
     const structuralFailure = deterministic.status !== 'Approved';
     if (structuralFailure) { setDocChecks(old => ({ ...old, [step.name]: deterministic })); console.log('Document validation: deterministic fallback'); return; }
     try {
-      const body = new FormData(); body.append('file', file);
+      const body = new FormData(); body.append('file', file); body.append('expectedDocumentType', step.name);
       const response = await fetch('/api/validate-document', { method: 'POST', body, signal: AbortSignal.timeout(40000) });
       const result = await response.json(); console.info('[ApprovalOS Gemini]', JSON.stringify({ route: 'validate-document', ...result.debug }));
-      if (result.ai && result.fields) { setDocChecks(old => ({ ...old, [step.name]: validateExtractedDocument(step, file, result.fields) })); console.log('Document validation: AI'); }
+      if (result.ai && result.fields) { const aiCheck = result.fields.valid === false ? { status: 'Query raised', reason: result.debug?.reason || `Could not verify this as a valid ${step.name} (confidence ${result.fields.confidence ?? 0}%).`, fileName: file.name } : validateExtractedDocument(step, file, result.fields); setDocChecks(old => ({ ...old, [step.name]: aiCheck })); console.log('Document validation: AI'); }
       else { setDocChecks(old => ({ ...old, [step.name]: deterministic })); console.log('Document validation: deterministic fallback'); }
     } catch { setDocChecks(old => ({ ...old, [step.name]: deterministic })); console.log('Document validation: deterministic fallback'); }
   }
