@@ -14,7 +14,9 @@ Open `http://localhost:3000`.
 
 The demo is fully usable without an API key: `/api/ask` uses the small curated local knowledge base in `data/regulations/` and gracefully falls back whenever Gemini is unavailable. The model is configurable through `GEMINI_MODEL`; the default free-tier Flash model is `gemini-3-flash-preview`.
 
-Document uploads run the deterministic type/size/expiry checks immediately, then optionally call `/api/validate-document` for Gemini field extraction (7-second abort). The browser console records either `Document validation: AI` or `Document validation: deterministic fallback`; an AI failure is intentionally invisible in the UI.
+Document uploads run deterministic type/size checks immediately, then optionally call `/api/validate-document` for OCR field extraction. The validator uses a document-specific rule: pollution consent permits a missing expiry, Fire NOCs use Maharashtra's 1-year or Gujarat's 3-year cycle, MIDC allotments require possession and plot details, and labour licences follow the Factory or Shops & Establishment path based on sector. Date labels are phrase-order-flexible and support slash, dot, and hyphen formats. PDFs retain their structural approval when local OCR tooling is unavailable instead of being rejected solely because content extraction is unavailable. The browser console records either `Document validation: AI` or `Document validation: deterministic fallback`; an OCR failure is intentionally invisible in the UI.
+
+The OCR demo fixtures in `data/fixtures/` cover the MIDC possession-date path and the distinct Maharashtra and Gujarat Fire NOC validity windows.
 
 ## Demo path
 
