@@ -1,0 +1,22 @@
+export type Persona = 'applicant' | 'official';
+export type Department = 'All Departments' | 'MPCB' | 'Fire Department' | 'Factory Inspectorate' | 'MIDC';
+export type InspectionStatus = 'proposed' | 'requested' | 'confirmed' | 'declined' | 'new-time-proposed';
+export type DepartmentResponse = 'pending' | 'accepted' | 'declined';
+export type Inspection = {
+  id: string;
+  applicationId: string;
+  applicant: string;
+  location: string;
+  date: string;
+  time: string;
+  departments: Exclude<Department, 'All Departments'>[];
+  inspectionType: string;
+  status: InspectionStatus;
+  responses: Record<Exclude<Department, 'All Departments'>, DepartmentResponse>;
+  notes: string;
+};
+export type Screen = 'home' | 'new' | 'status' | 'dashboard' | 'planner';
+export type Step = { name: string; department: string; status: string; days: string; filingPortal: string; depends?: string };
+export type AppRecord = { id: string; name: string; sector: string; state: string; district: string; investment: string; stage: string; steps: Step[]; status: string; createdAt: string; mahaParwana?: boolean };
+export type DocCheck = { status: string; reason: string; fileName: string };
+export type Explanation = { answer: string; fallback: boolean };
