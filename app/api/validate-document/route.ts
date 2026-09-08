@@ -70,7 +70,9 @@ function containsApplicantName(text: string, name: string) {
 }
 
 function identifyingInfo(text: string, name: string, address: string, expectedApplicantName = '') {
-  return Boolean(expectedApplicantName ? containsApplicantName(text, normalizeEntityPrefix(expectedApplicantName)) : (name && containsApplicantName(text, name)) || address);
+  const expectedNameMatches = expectedApplicantName && containsApplicantName(text, normalizeEntityPrefix(expectedApplicantName));
+  const extractedIdentity = (name && containsApplicantName(text, name)) || address;
+  return Boolean(expectedNameMatches || extractedIdentity);
 }
 
 function parseDate(value: string) {
@@ -198,7 +200,13 @@ function ruleKey(expected: string) {
   const value = expected.toLowerCase();
   if (value.includes('fire')) return 'fire';
   if (value.includes('midc') || value.includes('land allotment')) return 'midc';
-  if (value.includes('labour') || value.includes('labor')) return 'labour';
+  if (
+    value.includes('labour') ||
+    value.includes('labor') ||
+    value.includes('factory licence') ||
+    value.includes('factory license') ||
+    value.includes('directorate of industrial safety')
+  ) return 'labour';
   if (value.includes('pollution') || value.includes('mpcb') || value.includes('gpcb') || value.includes('consent')) return 'pollution';
   return '';
 }
@@ -252,21 +260,21 @@ export async function GET() {
     return new Response('Fixture runner is available only in development.', { status: 404 });
   }
   const fixtureDir = join(process.cwd(), 'data', 'fixtures');
-  const expectedByFile: Record<string, { type: string; expected: boolean; sector: string; state: string }> = {
+  const expectedByFile: Record<string, { type: string; expected: boolean; sector: string; state: string; applicantName?: string }> = {
     'fire-noc-gujarat.txt': { type: 'Fire NOC', expected: true, sector: 'Chemicals', state: 'Gujarat' },
     'fire-noc-maharashtra.txt': { type: 'Fire NOC', expected: true, sector: 'Manufacturing', state: 'Maharashtra' },
-    'labour-licence-mh.txt': { type: 'Labour licence', expected: true, sector: 'Manufacturing', state: 'Maharashtra' },
+    'labour-licence-mh.txt': { type: 'Labour licence', expected: true, sector: 'Manufacturing', state: 'Maharashtra', applicantName: 'Konkan Components Pvt Ltd' },
     'midc-allotment.txt': { type: 'MIDC plot / land allotment', expected: true, sector: 'Manufacturing', state: 'Maharashtra' },
     'midc-cidco-negative.txt': { type: 'MIDC plot / land allotment', expected: false, sector: 'Manufacturing', state: 'Maharashtra' },
-    'pollution-consent-gj.txt': { type: 'Pollution consent', expected: true, sector: 'Manufacturing', state: 'Gujarat' },
-    'pollution-consent-mh.txt': { type: 'Pollution consent', expected: true, sector: 'Manufacturing', state: 'Maharashtra' },
+    'pollution-consent-gj.txt': { type: 'Pollution consent', expected: true, sector: 'Manufacturing', state: 'Gujarat', applicantName: 'Lulli Company' },
+    'pollution-consent-mh.txt': { type: 'Pollution consent', expected: true, sector: 'Manufacturing', state: 'Maharashtra', applicantName: 'Konkan Components Pvt Ltd' },
     'random-garbled-negative.txt': { type: 'MIDC plot / land allotment', expected: false, sector: 'Manufacturing', state: 'Maharashtra' },
   };
   const files = (await readdir(fixtureDir)).filter(file => /\.(txt|md)$/i.test(file)).sort();
   const rows = await Promise.all(files.map(async filename => {
     const text = await readFile(join(fixtureDir, filename), 'utf8');
     const metadata = expectedByFile[filename] || { type: 'Unmapped fixture', expected: false, sector: '', state: '' };
-    const fields = classify(text, metadata.type, metadata.sector, metadata.state);
+    const fields = classify(text, metadata.type, metadata.sector, metadata.state, metadata.applicantName);
     const datesFound = dates(text).map(date => `${date.raw} -> ${date.parsed.toISOString().slice(0, 10)}`).join('; ') || 'none';
     const identifyingInfo = fields.name || fields.address ? 'Y' : 'N';
     const pass = fields.valid === metadata.expected;

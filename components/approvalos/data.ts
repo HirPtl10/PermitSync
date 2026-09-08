@@ -1,6 +1,6 @@
-import type { AppRecord, Inspection, Step } from './types';
+import type { AppRecord, Grievance, Inspection, Step } from './types';
 
-export const DEFAULT_FORM = { name: 'Konkan Precision Components', sector: 'Manufacturing', state: 'Maharashtra', district: 'Pune', investment: '₹75 crore', stage: 'Pre-establishment' };
+export const DEFAULT_FORM = { name: 'Konkan Components Pvt Ltd', sector: 'Manufacturing', state: 'Maharashtra', district: 'Pune', investment: '₹75 crore', stage: 'Pre-establishment' };
 export const MH_DISTRICTS = ['Mumbai', 'Pune', 'Nagpur', 'Nashik', 'Chhatrapati Sambhajinagar'];
 export const GJ_DISTRICTS = ['Anand', 'Vadodara', 'Ahmedabad'];
 export const initialInspections: Inspection[] = [{
@@ -16,6 +16,11 @@ export const initialInspections: Inspection[] = [{
   responses: { 'Fire Department': 'pending', 'Factory Inspectorate': 'pending', MPCB: 'pending', MIDC: 'pending' },
   notes: 'Same premises with overlapping inspection availability.'
 }];
+export const initialGrievances: Grievance[] = [
+  { id: 'GRV-001', applicationId: 'APP-MH-0143', reason: 'Delayed beyond SLA', note: 'MPCB review has used most of the available window.', status: 'Open', raisedAt: new Date(Date.now() - 2 * 86400000).toISOString() },
+  { id: 'GRV-002', applicationId: 'APP-GJ-0201', reason: 'No response from department', note: 'Awaiting an update on the Fire NOC inspection.', status: 'In Progress', raisedAt: new Date(Date.now() - 6 * 86400000).toISOString() },
+  { id: 'GRV-003', applicationId: 'APP-GJ-0203', reason: 'Asked for documents not required', note: 'Applicant requested review of the additional document request.', status: 'Open', raisedAt: new Date(Date.now() - 9 * 86400000).toISOString() }
+];
 const MAITRI = "MAITRI — Maharashtra's state single window (syncs status to NSWS)";
 const GUJARAT_PORTAL = 'State portal (Gujarat)';
 

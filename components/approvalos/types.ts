@@ -15,7 +15,9 @@ export type Inspection = {
   responses: Record<Exclude<Department, 'All Departments'>, DepartmentResponse>;
   notes: string;
 };
-export type Screen = 'home' | 'new' | 'status' | 'dashboard' | 'planner';
+export type Screen = 'home' | 'new' | 'status' | 'dashboard' | 'analytics' | 'planner' | 'grievances';
+export type GrievanceStatus = 'Open' | 'In Progress' | 'Resolved';
+export type Grievance = { id: string; applicationId: string; reason: string; note: string; status: GrievanceStatus; raisedAt: string };
 export type Step = { name: string; department: string; status: string; days: string; filingPortal: string; depends?: string };
 export type AppRecord = { id: string; name: string; sector: string; state: string; district: string; investment: string; stage: string; steps: Step[]; status: string; createdAt: string; mahaParwana?: boolean };
 export type DocCheck = { status: string; reason: string; fileName: string };
