@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const MODEL_NAME = 'gemini-3-flash-preview';
+const MODEL_NAME = 'gemini-3.1-flash-lite';
 const FALLBACK = (step: string, daysUsed: string, department: string) => `Currently at ${step}, ${daysUsed} SLA days used, with ${department}.`;
 
 type Context = {
@@ -17,7 +17,7 @@ function fallbackResponse(context: Context, code: string) {
     context.daysUsed || 'an unknown number of',
     context.department || 'the responsible department'
   );
-  console.info('[ApprovalOS stuck explanation]', { path: 'fallback', code, model: MODEL_NAME });
+  console.info('[Permit Sync stuck explanation]', { path: 'fallback', code, model: MODEL_NAME });
   return Response.json({ answer, fallback: true, debug: { code, model: MODEL_NAME } });
 }
 
@@ -51,15 +51,15 @@ export async function POST(req: Request) {
     const model = ai.getGenerativeModel({ model: MODEL_NAME });
     const result = await model.generateContent(
       `Given this application's current status, explain in 2-3 plain sentences why this step may be taking time and what typically happens next. Do not invent information not present in the provided data. If it's genuinely on track, say so plainly.\n\nAPPLICATION DATA:\n${prompt}`,
-      { signal: AbortSignal.timeout(7000) }
+      { signal: AbortSignal.timeout(15000) }
     );
     const answer = result.response.text();
     if (!isCleanShortText(answer)) return fallbackResponse(context, 'invalid_gemini_text');
-    console.info('[ApprovalOS stuck explanation]', { path: 'gemini', code: 'gemini_success', model: MODEL_NAME });
+    console.info('[Permit Sync stuck explanation]', { path: 'gemini', code: 'gemini_success', model: MODEL_NAME });
     return Response.json({ answer: answer.trim(), fallback: false, debug: { code: 'gemini_success', model: MODEL_NAME } });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error('[ApprovalOS stuck explanation]', { path: 'fallback', code: 'gemini_error', model: MODEL_NAME, error: message.slice(0, 240) });
+    console.error('[Permit Sync stuck explanation]', { path: 'fallback', code: 'gemini_error', model: MODEL_NAME, error: message.slice(0, 240) });
     return fallbackResponse(context, 'gemini_error');
   }
 }

@@ -1,12 +1,7 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-import { writeFile, readFile, unlink } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { randomUUID } from 'node:crypto';
-import { readdir } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 
-const exec = promisify(execFile);
+export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 type ParsedDate = { raw: string; parsed: Date };
@@ -32,20 +27,6 @@ function signature(type: string, b: Uint8Array) {
   const png = [137, 80, 78, 71, 13, 10, 26, 10].every((x, i) => b[i] === x);
   const jpg = b[0] === 255 && b[1] === 216 && b[2] === 255;
   return (type === 'application/pdf' && pdf) || (type === 'image/png' && png) || (type === 'image/jpeg' && jpg);
-}
-
-async function ocr(bytes: Uint8Array, ext: string) {
-  const id = randomUUID();
-  const input = join(tmpdir(), `${id}.${ext}`);
-  const output = join(tmpdir(), id);
-  try {
-    await writeFile(input, bytes);
-    await exec('tesseract', [input, output, '--psm', '6']);
-    return await readFile(`${output}.txt`, 'utf8');
-  } finally {
-    await unlink(input).catch(() => {});
-    await unlink(`${output}.txt`).catch(() => {});
-  }
 }
 
 function field(text: string, labels: string[]) {
@@ -236,21 +217,15 @@ export async function POST(req: Request) {
     if (!(file instanceof File) || file.size < 256 || !['application/pdf', 'image/jpeg', 'image/png'].includes(file.type)) return Response.json({ ai: false, debug: result('structural_validation_failed') });
     const bytes = new Uint8Array(await file.arrayBuffer());
     if (!signature(file.type, bytes)) return Response.json({ ai: false, debug: result('structural_validation_failed', { reason: 'file_signature_mismatch' }) });
-    if (file.type === 'application/pdf') return Response.json({ ai: false, debug: result('pdf_ocr_unavailable', { reason: 'PDF text extraction is unavailable without a PDF conversion dependency; retaining structural approval instead of rejecting the document.' }) });
-    let text: string;
-    try {
-      text = await ocr(bytes, file.type === 'image/png' ? 'png' : 'jpg');
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      return Response.json({ ai: false, debug: result('ocr_failed', { error: message.slice(0, 240) }) });
-    }
+    const text = String(form.get('ocrText') || '').trim();
+    if (!text) return Response.json({ ai: false, debug: result('client_ocr_unavailable', { reason: 'No browser OCR text was provided; PDF content extraction is not available without a client OCR pass.' }) });
 
     const fields = classify(text, expected, sector, state, applicantName);
-    console.info('[ApprovalOS validation]', result(fields.valid ? 'deterministic_valid' : 'deterministic_query', { expected, sector, state, validityPath: fields.validity_path, confidence: fields.confidence, reason: fields.reason, rawOcr: text }));
-    return Response.json({ ai: true, fields, debug: result(fields.valid ? 'deterministic_valid' : 'deterministic_query', { reason: fields.reason, confidence: fields.confidence, validityPath: fields.validity_path }) });
+    console.info('[Permit Sync validation]', result(fields.valid ? 'deterministic_valid' : 'deterministic_query', { expected, sector, state, validityPath: fields.validity_path, confidence: fields.confidence, reason: fields.reason, rawOcr: text }));
+    return Response.json({ ocr: true, fields, debug: result(fields.valid ? 'deterministic_valid' : 'deterministic_query', { reason: fields.reason, confidence: fields.confidence, validityPath: fields.validity_path }) });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error('[ApprovalOS validation]', result('route_error', { error: message.slice(0, 240) }));
+    console.error('[Permit Sync validation]', result('route_error', { error: message.slice(0, 240) }));
     return Response.json({ ai: false, debug: result('route_error', { error: message.slice(0, 240) }) });
   }
 }

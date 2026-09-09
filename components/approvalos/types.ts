@@ -21,4 +21,5 @@ export type Grievance = { id: string; applicationId: string; reason: string; not
 export type Step = { name: string; department: string; status: string; days: string; filingPortal: string; depends?: string };
 export type AppRecord = { id: string; name: string; sector: string; state: string; district: string; investment: string; stage: string; steps: Step[]; status: string; createdAt: string; mahaParwana?: boolean };
 export type DocCheck = { status: string; reason: string; fileName: string };
+export type DocumentSummary = { documentName: string; summary: string };
 export type Explanation = { answer: string; fallback: boolean };
