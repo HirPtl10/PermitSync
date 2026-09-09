@@ -1,4 +1,4 @@
-# ApprovalOS
+# Permit Sync
 
 A zero-cost, local hackathon MVP for explaining and orchestrating India industrial approvals. It is a smart layer beside NSWS, not a government-system integration.
 
@@ -29,3 +29,18 @@ The OCR demo fixtures in `data/fixtures/` cover the MIDC possession-date path an
 Use **Reset demo data** in the top bar (or `Cmd/Ctrl+Shift+R`) between rehearsal runs. It restores the landing screen, persona, form, uploads, chat state and inspection scheduling state to their seeded defaults.
 
 All SLAs, dates, applications and performance estimates are illustrative mock data for the demo.
+
+## Vercel production constraints
+
+Permit Sync can be deployed to Vercel as a demo, but the current architecture has deliberate production limitations:
+
+- **Serverless execution:** API routes run as stateless Vercel Functions. Do not depend on process memory for durable applications, inspections, grievances, alerts, or uploaded files.
+- **No durable database:** workflow state is seeded/local React state and resets on reload. A production deployment needs a database and authenticated persistence layer.
+- **Ephemeral filesystem:** temporary OCR files are safe only during a single request. Vercel function filesystems are not persistent storage; use object storage for documents.
+- **Tesseract availability:** the image OCR route invokes the `tesseract` executable, which is not guaranteed to exist in a standard Vercel runtime. PDF uploads retain structural validation, but production image OCR requires an external OCR service or a custom runtime that packages Tesseract.
+- **Function duration:** document OCR and Gemini calls are request-bound and subject to the Vercel plan's function timeout. Keep the configured route duration within the selected plan limit and use short AI timeouts.
+- **Environment variables:** configure `GEMINI_API_KEY` in Vercel Project Settings for live Gemini responses. Set `GEMINI_MODEL` only to a model available to that key. Never expose either value with a `NEXT_PUBLIC_` prefix.
+- **External integrations:** NSWS, MAITRI, government portals, authentication, notifications, and payment systems are represented as static labels or demo flows; they are not connected.
+- **Observability:** use Vercel Function Logs for server-side validation and Gemini diagnostics; browser console logs are not a substitute for production audit logging.
+
+For a production launch, replace local state with a database, add authentication and authorization, store documents in durable object storage, move OCR to a supported service/runtime, and add rate limiting, audit logs, and monitoring.
