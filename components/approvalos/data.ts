@@ -1,4 +1,4 @@
-import type { AppRecord, Grievance, Inspection, Step } from './types';
+import type { AppRecord, Approval, Grievance, Inspection, RequiredDocument, Step } from './types';
 
 export const DEFAULT_FORM = { name: 'Konkan Components Pvt Ltd', sector: 'Manufacturing', state: 'Maharashtra', district: 'Pune', investment: '₹75 crore', stage: 'Pre-establishment' };
 export const MH_DISTRICTS = ['Mumbai', 'Pune', 'Nagpur', 'Nashik', 'Chhatrapati Sambhajinagar'];
@@ -41,6 +41,28 @@ export function rulesFor(state: string, sector: string, investment: string): Ste
   ];
 }
 
+export function requiredDocumentsFor(step: Step): RequiredDocument[] {
+  const approval = step.name.toLowerCase();
+  const docs = approval.includes('pollution') || approval.includes('consent')
+    ? [['pollutionPerms', 'Pollution permissions', step.name]]
+    : approval.includes('fire')
+      ? [['buildingPlan', 'Building Plan', 'Building Plan']]
+      : approval.includes('building plan')
+        ? [['buildingPlan', 'Building Plan', 'Building Plan']]
+        : approval.includes('midc') || approval.includes('land allotment')
+          ? [['landPlotDocument', 'Land / Plot Document', 'Land / Plot Document']]
+        : [['factoryPremisesPlan', 'Factory / Premises Plan', 'Factory / Premises Plan']];
+  return docs.map(([id, name, validationType]) => ({ id: `${step.name}:${id}`, name, validationType }));
+}
+
+export function approvalRecordsForSteps(steps: Step[]): Approval[] {
+  return steps.map(step => {
+    const requiredDocuments = requiredDocumentsFor(step);
+    const ready = requiredDocuments.length === 0;
+    return { name: step.name, authority: step.department, status: step.status, requiredDocuments, readinessStatus: ready ? 'Ready for submission' : 'Documents required', filingPortal: step.filingPortal };
+  });
+}
+
 export const seedApps: AppRecord[] = [
   { id: 'APP-MH-0142', name: 'Konkan Components Pvt Ltd', sector: 'Manufacturing', state: 'Maharashtra', district: 'Pune', investment: '₹75 crore', stage: 'Construction', status: 'On track', createdAt: 'Seeded', mahaParwana: true, steps: [{ name: 'MPCB consent to establish', department: 'MPCB', status: 'Under review', days: 'Maha Parwana: 8 of 30 days used', filingPortal: MAITRI }, { name: 'Fire NOC (Maharashtra Fire Prevention Act)', department: 'Maharashtra Fire Services', status: 'Eligible', days: 'Maha Parwana: 0 of 30 days used', filingPortal: MAITRI }, { name: 'MIDC plot / land allotment', department: 'MIDC', status: 'Submitted', days: '5 of 10 days used', filingPortal: MAITRI }, { name: 'Factory licence (Directorate of Industrial Safety & Health)', department: 'Directorate of Industrial Safety & Health', status: 'Blocked', days: '—', filingPortal: MAITRI, depends: 'MIDC plot / land allotment' }] },
   { id: 'APP-MH-0143', name: 'Deccan Food Systems', sector: 'Food processing', state: 'Maharashtra', district: 'Nashik', investment: '₹75 crore', stage: 'Pre-establishment', status: 'At risk', createdAt: 'Seeded', mahaParwana: true, steps: rulesFor('Maharashtra', 'Food processing', '₹75 crore').map((s, i) => i === 0 ? { ...s, status: 'Under review', days: 'Maha Parwana: 27 of 30 days used' } : s) },
@@ -49,3 +71,5 @@ export const seedApps: AppRecord[] = [
   { id: 'APP-GJ-0202', name: 'Nexus Infoware', sector: 'IT-Services', state: 'Gujarat', district: 'Ahmedabad', investment: '₹2 crore', stage: 'Pre-establishment', status: 'On track', createdAt: 'Seeded', steps: rulesFor('Gujarat', 'IT-Services', '₹2 crore') },
   { id: 'APP-GJ-0203', name: 'Saffron Foods LLP', sector: 'Food processing', state: 'Gujarat', district: 'Anand', investment: '₹12 crore', stage: 'Construction', status: 'At risk', createdAt: 'Seeded', steps: rulesFor('Gujarat', 'Food processing', '₹12 crore') }
 ];
+
+seedApps.forEach(app => { app.approvals = approvalRecordsForSteps(app.steps); });

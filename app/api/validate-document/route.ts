@@ -144,6 +144,42 @@ type RuleResult = { documentType: string; path: string; valid: boolean; reason: 
 type DocumentRule = { matches: (context: RuleContext) => boolean; validate: (context: RuleContext) => RuleResult };
 
 const documentRules: Record<string, DocumentRule> = {
+  'building-plan': {
+    matches: ({ text }) => /building\s+plan|site\s+plan|layout\s+plan|floor\s+plan|architectural\s+plan/i.test(text),
+    validate: ({ text, name, address, applicantName }) => {
+      const meaningful = identifyingInfo(text, name, address, applicantName);
+      return {
+        documentType: 'Building Plan',
+        path: 'building-plan-document',
+        valid: meaningful,
+        reason: !meaningful ? 'Query raised — Company name does not match the application.' : 'Building Plan verified — document type and company details match.',
+      };
+    },
+  },
+  'land-plot-document': {
+    matches: ({ text }) => /land\s+(?:allotment|ownership|title|document)|plot\s+(?:allotment|ownership|document)|survey\s*(?:no|number)|industrial\s+plot/i.test(text),
+    validate: ({ text, name, address, applicantName }) => {
+      const meaningful = identifyingInfo(text, name, address, applicantName);
+      return {
+        documentType: 'Land / Plot Document',
+        path: 'land-plot-document',
+        valid: meaningful,
+        reason: !meaningful ? 'Query raised — Company name does not match the application.' : 'Land / Plot Document verified — document type and company details match.',
+      };
+    },
+  },
+  'factory-premises-plan': {
+    matches: ({ text }) => /factory\s+(?:premises|site|layout)\s+plan|premises\s+plan|factory\s+layout|machinery\s+layout/i.test(text),
+    validate: ({ text, name, address, applicantName }) => {
+      const meaningful = identifyingInfo(text, name, address, applicantName);
+      return {
+        documentType: 'Factory / Premises Plan',
+        path: 'factory-premises-plan',
+        valid: meaningful,
+        reason: !meaningful ? 'Query raised — Company name does not match the application.' : 'Factory / Premises Plan verified — document type and company details match.',
+      };
+    },
+  },
   pollution: {
     matches: ({ text }) => /consent\s+to\s+establish/i.test(text) && /(?:mpcb|gpcb)/i.test(text),
     validate: ({ text, name, address, applicantName, expiry }) => {
@@ -205,6 +241,9 @@ const documentRules: Record<string, DocumentRule> = {
 
 function ruleKey(expected: string) {
   const value = expected.toLowerCase();
+  if (value.includes('building plan')) return 'building-plan';
+  if (value.includes('land / plot document') || value.includes('land plot document')) return 'land-plot-document';
+  if (value.includes('factory / premises plan') || value.includes('factory premises plan')) return 'factory-premises-plan';
   if (value.includes('fire')) return 'fire';
   if (value.includes('midc') || value.includes('land allotment')) return 'midc';
   if (
@@ -228,7 +267,7 @@ function classify(text: string, expected: string, sector: string, state = '', ex
   const possession = nearbyDate(text, ['possession', 'allotment']);
   const context = { text, expected, sector, state, applicantName: expectedApplicantName, name, address, issue, expiry, possession };
   const matches = Boolean(rule && rule.matches(context));
-  const decision = rule && matches ? rule.validate(context) : { documentType: '', path: key || 'unknown', valid: false, reason: !text.trim() ? 'Query raised — OCR returned no readable text.' : !rule ? `Query raised — no validation rule exists for ${expected}.` : `Query raised — OCR does not contain evidence for ${expected}.` };
+  const decision = rule && matches ? rule.validate(context) : { documentType: '', path: key || 'unknown', valid: false, reason: !text.trim() ? 'Query raised — OCR returned no readable text.' : !rule ? `Query raised — no validation rule exists for ${expected}.` : `Query raised — Document does not appear to be ${expected}.` };
   return { document_type: decision.documentType, name, address, issue_date: issue?.raw || '', expiry_date: expiry?.raw || '', possession_date: possession?.raw || '', valid: decision.valid, confidence: decision.valid ? 90 : matches ? 35 : 10, validity_path: decision.path, reason: decision.reason };
 }
 
