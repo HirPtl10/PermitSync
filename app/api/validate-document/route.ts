@@ -38,6 +38,25 @@ function normalizeEntityPrefix(value: string) {
   return value.replace(/^\s*(?:m\/s\.?|messrs\.?)\s*/i, '').trim();
 }
 
+function normalizeNameForMatch(value: string) {
+  const normalized = normalizeEntityPrefix(value)
+    .toLocaleLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+  // M/s is an optional document prefix and OCR may render it as M / S or MS.
+  return normalized.replace(/^(?:m\s+s|ms)\s+/, '').trim();
+}
+
+const LEGAL_SUFFIXES = new Set(['pvt', 'private', 'ltd', 'limited', 'llp', 'inc', 'incorporated', 'corp', 'corporation', 'co', 'company']);
+
+function coreCompanyName(value: string) {
+  const parts = normalizeNameForMatch(value).split(' ').filter(Boolean);
+  while (parts.length > 1 && LEGAL_SUFFIXES.has(parts[parts.length - 1])) parts.pop();
+  return parts.join(' ');
+}
+
 function applicantName(text: string) {
   const labeled = field(text, ['name', 'applicant', 'company', 'licensed\\s+to']);
   if (labeled) return labeled;
@@ -46,14 +65,21 @@ function applicantName(text: string) {
 }
 
 function containsApplicantName(text: string, name: string) {
-  const normalizedText = normalizeEntityPrefix(text).toLocaleLowerCase();
-  return Boolean(name && normalizedText.includes(name.toLocaleLowerCase()));
+  const normalizedText = ` ${normalizeNameForMatch(text)} `;
+  const normalizedName = normalizeNameForMatch(name);
+  if (!normalizedName) return false;
+  if (normalizedText.includes(` ${normalizedName} `)) return true;
+  const core = coreCompanyName(name);
+  return core.length >= 5 && normalizedText.includes(` ${core} `);
 }
 
 function identifyingInfo(text: string, name: string, address: string, expectedApplicantName = '') {
-  const expectedNameMatches = expectedApplicantName && containsApplicantName(text, normalizeEntityPrefix(expectedApplicantName));
+  // When the application supplies a company name, it is the identity anchor:
+  // an address or any other extracted name must not make another company's
+  // document pass validation.
+  if (expectedApplicantName.trim()) return containsApplicantName(text, expectedApplicantName);
   const extractedIdentity = (name && containsApplicantName(text, name)) || address;
-  return Boolean(expectedNameMatches || extractedIdentity);
+  return Boolean(extractedIdentity);
 }
 
 function parseDate(value: string) {
